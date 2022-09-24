@@ -1,0 +1,29 @@
+[
+  {
+    "extension": "pdf",
+    "fileName": "anotate.pdf",
+    "author": [
+      "Liam Arbuckle",
+      "0009-0000-9139-5148",
+      "DeSci Labs"
+    ]
+  },
+  {
+    "extension": "svg",
+    "fileName": "next.svg",
+    "author": [
+      "Liam Arbuckle",
+      "0009-0000-9139-5148",
+      "DeSci Labs"
+    ]
+  },
+  {
+    "extension": "json",
+    "fileName": "nodeContents.json",
+    "author": [
+      "Liam Arbuckle",
+      "0009-0000-9139-5148",
+      "DeSci Labs"
+    ]
+  },
+]

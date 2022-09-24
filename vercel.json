@@ -1,0 +1,8 @@
+{
+    "builds": [
+        {
+            "src": "flask-stream.py",
+            "use": "@vercel/python"
+        }
+    ]
+}
