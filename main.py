@@ -1,21 +1,65 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-import pinecone
+from flask import Flask, request, render_template, redirect, url_for, session
+import requests
 
-app = FastAPI()
+app = Flask(__name__)
+app.secret_key = '' # Set with JWT
 
-pinecone.init(api_key="YOUR_API_KEY", environment="us-west1-g")
+SUPABASE_URL = ''
+SUPABASE_API_KEY = ''
 
-class PineconeData(BaseModel):
-    text: str
-    filename: str
+@app.route('/')
+def index():
+    return render_template('index.html')
 
-@app.post("/generate")
-async def generate(data: PineconeData):
-    try:
-        pinecone_index = pinecone.Index(index_name=data.filename)
-        embeddings = pinecone_index.embed([data.text])
-        pinecone_index.upsert(ids=[data.filename], vectors=embeddings)
-        return {"message": "PDF uploaded to Pinecone successfully"}
-    except pinecone.exceptions.PineconeException as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@app.route('/register', methods=['POST'])
+def register():
+    email = request.form.get('email')
+    password = request.form.get('password')
+
+    # Send registration request to Supabase
+    response = requests.post(
+        f'{SUPABASE_URL}/auth/v1/signup',
+        json={'email': email, 'password': password},
+        headers={'apikey': SUPABASE_API_KEY}
+    )
+
+    if response.status_code == 200:
+        # Registration successful
+        return redirect(url_for('login'))
+    else:
+        # Handle registration error
+        return render_template('error.html', message='Registration failed')
+
+@app.route('/login', methods=['POST'])
+def login():
+    email = request.form.get('email')
+    password = request.form.get('password')
+
+    # Send login request to Supabase
+    response = requests.post(
+        f'{SUPABASE_URL}/auth/v1/token?grant_type=password&email={email}&password={password}',
+        headers={'apikey': SUPABASE_API_KEY}
+    )
+
+    if response.status_code == 200:
+        # Login successful
+        session['access_token'] = response.json()['access_token']
+        return redirect(url_for('profile'))
+    else:
+        # Handle login error
+        return render_template('error.html', message='Login failed')
+
+@app.route('/profile')
+def profile():
+    if 'access_token' in session:
+        return render_template('profile.html')
+    else:
+        return redirect(url_for('login'))
+
+@app.route('/logout')
+def logout():
+    session.pop('access_token', None)
+    return redirect(url_for('login'))
+
+if __name__ == '__main__':
+    app.run(debug=True)
