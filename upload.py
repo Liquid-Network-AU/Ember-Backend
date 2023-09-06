@@ -1,37 +1,37 @@
-from fastapi import FastAPI, File, UploadFile
-import io
-import PyPDF2
-import numpy as np
-import pinecone
+from flask import Blueprint, request, jsonify
+import os
 
-# Set up Pinecone
-pinecone.init(api_key="ba049302-4865-4a8d-9e96-bbc3174b480b", environment="us-central1-gcp")
-#pinecone.create_index("pdf", dimension=512)
+upload_bp = Blueprint('upload', __name__)
 
-app = FastAPI()
+# Define the directory where uploaded files will be saved
+UPLOAD_FOLDER = 'data'
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
 
-@app.post("/upload-pdf/")
-async def upload_pdf(file: UploadFile = File(...)):
-    # Read uploaded PDF file as bytes
-    pdf_bytes = await file.read()
+# Helper function to check if a file extension is allowed
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-    # Create an in-memory file object for PyPDF2
-    pdf_file = io.BytesIO(pdf_bytes)
+@upload_bp.route('/upload', methods=['POST'])
+def upload_file():
+    # Check if the POST request has a file part
+    if 'file' not in request.files:
+        return jsonify(message='No file part'), 400
 
-    # Create a PDF reader object using PyPDF2
-    pdf_reader = PyPDF2.PdfFileReader(pdf_file)
+    file = request.files['file']
 
-    # Extract text from the PDF
-    text = ""
-    for page in pdf_reader.pages:
-        text += page.extract_text()
+    # Check if the file is empty
+    if file.filename == '':
+        return jsonify(message='No selected file'), 400
 
-    # Convert the text to a vector representation
-    # (Note: This part depends on your specific use case and vectorization method)
-    vector = np.random.rand(512)
+    # Check if the file has an allowed extension
+    if not allowed_file(file.filename):
+        return jsonify(message='Invalid file extension'), 400
 
-    # Upload the vector to Pinecone
-    pinecone_index = pinecone.Index(index_name="pdfs")
-    pinecone_index.upsert(ids=[file.filename], vectors=[vector])
+    # Create the "data" directory if it doesn't exist
+    if not os.path.exists(UPLOAD_FOLDER):
+        os.makedirs(UPLOAD_FOLDER)
 
-    return {"text": text}
+    # Save the file to the "data" directory
+    file.save(os.path.join(UPLOAD_FOLDER, file.filename))
+
+    return jsonify(message='File uploaded successfully'), 200
